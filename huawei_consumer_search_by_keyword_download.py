@@ -24,7 +24,13 @@ def guessModel(txt):
 def guessVersion(txt):
     txt = txt.replace('_',' ')
     m = re.search(r'(V[A-Z0-9\.]+)\b', txt)
-    return m.group(1)
+    if m:
+        return m.group(1)
+    m = re.search(r'\d+\.[\d\.]+\b', txt)
+    if m:
+        return m.group(0)
+    return None
+
 
 
 def main():
@@ -59,6 +65,8 @@ def main():
             uprint('model="%s"'%model)
             fw_ver = guessVersion(file_name)
             uprint('fw_ver="%s"'%fw_ver)
+            if not fw_ver:
+                continue
             try:
                 local_file  = downloadFile(file_url, "Content-Disposition")
             except TypeError:
