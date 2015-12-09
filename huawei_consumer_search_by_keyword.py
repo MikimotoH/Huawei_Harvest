@@ -11,7 +11,7 @@ import re
 import time
 import ipdb
 import traceback
-from my_utils import uprint,ulog
+from my_utils import uprint,ulog,getFuncName
 from urllib import parse
 from os import path
 import itertools
@@ -124,11 +124,38 @@ def rowWalker():
 
 def pageWalker():
     global prevTrail, driver
+    CSS=driver.find_elements_by_css_selector
     try:
         startIdx = getStartIdx()
-        for idx in range(0, startIdx):
+        startPage = startIdx+1
+        curPage = 1
+        idx = curPage-1
+        while idx != startPage-1:
             ulog('idx=%d,page=%d'%(idx, (idx+1)))
-            waitClickable('.x-next-on').click()
+            pages = getElems('.x-page-com a')
+            def pageNum(p):
+                try:
+                    return int(p.text.strip())
+                except ValueError:
+                    pass
+                href = p.get_attribute('href')
+                if not href:
+                    return sys.maxsize
+                try:
+                    return int(re.search(r'void\((.+)\)', href).group(1))
+                except Exception as ex:
+                    ipdb.set_trace()
+                    traceback.print_exc()
+            tarPage = min(pages, key=lambda p: abs(startPage - pageNum(p)))
+            tarPage.click()
+            retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 8, 0.4 )
+            uprint('waitCursor shows')
+            retryUntilTrue(lambda:len(CSS('.x-waite'))==0 or 
+                    CSS('.x-waite')[0].is_displayed()==False, 60, 1 )
+            uprint('waitCursor disappears')
+            curPage = int(waitText('a.cur'))
+            ulog('curPage=%d'%curPage)
+            idx = curPage-1
 
         for idx in itertools.count(startIdx):
             ulog('idx=%d,page=%d'%(idx, (idx+1)))
@@ -141,6 +168,12 @@ def pageWalker():
                 ulog('last page')
                 break
             nextPage.click()
+            retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 8, 0.4 )
+            uprint('waitCursor shows')
+            retryUntilTrue(lambda:len(CSS('.x-waite'))==0 or 
+                    CSS('.x-waite')[0].is_displayed()==False, 60, 1 )
+            uprint('waitCursor disappears')
+
     except Exception as ex:
         ipdb.set_trace()
         traceback.print_exc()
@@ -155,6 +188,7 @@ def main():
         conn=sqlite3.connect('huawei_consumer_search_by_keyword.sqlite3')
         sql("CREATE TABLE IF NOT EXISTS TFiles("
             "id INTEGER NOT NULL,"
+            "keyword TEXT,"
             "file_name TEXT," # 'Ascend Mate (MT1-U06,Android 4.1,Emotion UI,V100R001C00B221,General Version)'
             "file_desc TEXT," # NBG5715
             "rel_date DATE," # 2015-05-30
@@ -174,9 +208,10 @@ def main():
         inp.send_keys(keyword)
         waitClickable('#search_by_kw > img').click()
         CSS=driver.find_elements_by_css_selector
-        retryUntilTrue(lambda:len(CSS('x.waite'))==1, 4, 0.4 )
+        retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 4, 0.4 )
         uprint('waitCursor shows')
-        retryUntilTrue(lambda:len(CSS('x.waite'))==0, 30, 1 )
+        retryUntilTrue(lambda:len(CSS('.x-waite'))==0 
+                or CSS('.x-waite')[0].is_displayed()==False, 30, 1 )
         uprint('waitCursor disappears')
         pageWalker()
         driver.quit()
@@ -185,9 +220,6 @@ def main():
         ipdb.set_trace()
         traceback.print_exc()
         driver.save_screenshot('main_excep.png')
-
-def main():
-
 
 if __name__=='__main__':
     try:
