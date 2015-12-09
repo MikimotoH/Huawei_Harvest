@@ -2,6 +2,11 @@
 from collections import OrderedDict
 from urllib import request, parse
 import urllib
+import html2text
+from lxml import etree
+import lxml
+import re
+from my_utils import uprint
 
 
 def firefox_url_req(url: str) -> request.Request:
@@ -16,32 +21,11 @@ def firefox_url_req(url: str) -> request.Request:
     ])
     return request.Request(url, headers=headers)
 
-"""
-def get_http_resp_content(url:str) -> str:
-    req = firefox_url_req(url)
-    with request.urlopen(req) as fin:
-        content_encoding = fin.info().get("Content-Encoding").lower().strip()
-        content_type = fin.info().get("Content-Type")
-        content_charset = next(( _ for _ in content_type.split(';') if _.startswith("charset=")),
-                                "charset=UTF-8" )
-        content_charset = content_charset.split(sep='=', maxsplit=1)[1]
-        if 'gzip' in content_encoding:
-            from io import BytesIO
-            import gzip
-            gzdata = BytesIO(fin.readall())
-            gzfile = gzip.GzipFile(fileobj=gzdata)
-            data = gzfile.read()
-        else:
-            data = fin.readall()
-        return data.decode(content_charset)
-"""
-
 def get_http_resp_content(url:str) -> str:
     data, content_charset, _ =  get_http_resp_content_bin(url)
     if not data:
         return ""
     return data.decode(content_charset)
-
 
 
 def get_http_resp_content_bin(url:str) -> (bytes, str, str):
@@ -69,6 +53,7 @@ def get_http_resp_content_bin(url:str) -> (bytes, str, str):
         traceback.print_exc()
         print(ex)
         return None,None,None
+
 
 def urlFileName(url:str)->str:
     from os import path
@@ -124,6 +109,14 @@ def downloadFile(url:str, fname:str, timeOut:int=10, chunkSize:int=2*1024*1024,
             with request.urlopen(firefox_url_req(url),
                 timeout=timeOut) as resp:
                 uprint("resp_headers=%s"%(resp.info().items()))
+                if fname == 'Content-Disposition':
+                    """
+                    Content-Disposition: attachment; filename="SBRAC1750-1.0.9.img"
+                    """
+                    cdval = resp.info()['Content-Disposition']
+                    fname = re.search(r'filename="(.+)(?<!\\)"', cdval).group(1)
+                    uprint('fname="%s"'%fname)
+
                 with open(fname+".part", mode='wb') as fout:
                     while True:
                         data=resp.read(chunkSize)
@@ -157,10 +150,6 @@ def safeFileName(name:str)->str:
     bb =re.compile(r"[a-z0-9\-_.]",flags=re.IGNORECASE)
     return ''.join(_ if bb.match(_) else pq(_) for _ in name)
 
-def uprint(msg:str):
-    import sys
-    sys.stdout.buffer.write((msg+'\n').encode('utf8'))
-
 
 def getFileSha1(fileName)->str:
     import hashlib
@@ -169,3 +158,21 @@ def getFileSha1(fileName)->str:
     with open(fileName,mode='rb') as fin:
         data = fin.read()
         return sha1(data)
+
+from lxml.html import Element
+def elmToMd(elm:Element, ignore_links=True, ignore_images=True, 
+        ignore_emphasis=True)->str:
+    html = etree.tostring(elm).decode('utf-8')
+    h = html2text.HTML2Text()
+    h.body_width=0
+    h.ignore_emphasis = ignore_emphasis
+    h.ignore_images= ignore_images
+    h.ignore_links= ignore_links
+    return h.handle(html)                                                               
+def urlChangePath(baseUrl:str, path:str)->str:
+    if re.match('http|https', path):
+        return path
+    sp= parse.urlsplit(baseUrl)
+    assert sp.scheme and sp.netloc
+    return parse.SplitResult(sp.scheme, sp.netloc, path, '','').geturl()
+
