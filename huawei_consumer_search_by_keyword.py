@@ -147,8 +147,11 @@ def pageWalker():
                     ipdb.set_trace()
                     traceback.print_exc()
             tarPage = min(pages, key=lambda p: abs(startPage - pageNum(p)))
+            ulog('tarPage=%d'%pageNum(tarPage))
             tarPage.click()
-            retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 8, 0.4 )
+            ulog('tarPage.click()')
+            time.sleep(0.5)
+            retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 16, 0.4 )
             uprint('waitCursor shows')
             retryUntilTrue(lambda:len(CSS('.x-waite'))==0 or 
                     CSS('.x-waite')[0].is_displayed()==False, 60, 1 )
@@ -168,7 +171,9 @@ def pageWalker():
                 ulog('last page')
                 break
             nextPage.click()
-            retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 8, 0.4 )
+            ulog('nextPage.click()')
+            time.sleep(0.5)
+            retryUntilTrue(lambda:len(CSS('.x-waite'))==1, 16, 0.4 )
             uprint('waitCursor shows')
             retryUntilTrue(lambda:len(CSS('.x-waite'))==0 or 
                     CSS('.x-waite')[0].is_displayed()==False, 60, 1 )
