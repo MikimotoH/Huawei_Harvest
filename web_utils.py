@@ -125,7 +125,7 @@ def downloadFile(url:str, fname:str, timeOut:int=10, chunkSize:int=2*1024*1024,
                             print('',flush=True)
                             import os
                             os.rename(fname+".part", fname)
-                            return
+                            return fname
                         fout.write(data)
                         fout.flush()
                 import pdb; pdb.set_trace()
