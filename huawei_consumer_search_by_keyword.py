@@ -20,7 +20,6 @@ import itertools
 driver,conn=None,None
 prevTrail=[]
 startTrail=[]
-conn,driver=None,None
 keyword=''
 
 def glocals()->dict:

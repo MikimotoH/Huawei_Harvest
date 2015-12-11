@@ -19,7 +19,9 @@ conn=None
 def guessModel(txt):
     txt = txt.replace('_', ' ')
     m = re.search(r'[A-Z]{1,2}\d{2,4}[A-Za-z]{0,1}', txt)
-    return m.group(0)
+    if m:
+        return m.group(0)
+    return m
 
 def guessVersion(txt):
     txt = txt.replace('_',' ')
@@ -63,6 +65,8 @@ def main():
             uprint('idx=%d, file_name="%s",file_size=%d'%(idx,file_name,file_size))
             model = guessModel(file_name)
             uprint('model="%s"'%model)
+            if not model:
+                continue
             fw_ver = guessVersion(file_name)
             uprint('fw_ver="%s"'%fw_ver)
             if not fw_ver:
